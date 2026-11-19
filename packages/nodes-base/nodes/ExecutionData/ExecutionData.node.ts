@@ -4,7 +4,7 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError, setSafeObjectProperty } from 'n8n-workflow';
 
 type DataToSave = {
 	values: Array<{ key: string; value: string }>;
@@ -120,8 +120,10 @@ export class ExecutionData implements INodeType {
 
 					const values = dataToSave.reduce(
 						(acc, { key, value }) => {
-							const valueToSet = value ? value : nodeVersion >= 1.1 ? '' : value;
-							acc[key] = valueToSet;
+							// Expressions can resolve to non-string values such as `0` or `false`.
+							// Keep them instead of treating them as empty.
+							const valueToSet = nodeVersion >= 1.1 ? String(value ?? '') : value;
+							setSafeObjectProperty(acc, key, valueToSet);
 							return acc;
 						},
 						{} as { [key: string]: string },
